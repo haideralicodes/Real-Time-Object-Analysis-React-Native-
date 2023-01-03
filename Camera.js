@@ -1,6 +1,4 @@
-import React, {useRef, useState} from 'react';
-
-import { Alert, TouchableOpacity } from "react-native";
+import React, {useEffect, useRef, useState} from 'react';
 
 import {
   View,
@@ -10,8 +8,12 @@ import {
   Modal,
   Text,
   ActivityIndicator,
+  Alert, 
+  TouchableOpacity
 } from 'react-native';
+
 import {
+  Camera,
   CameraType,
   requestCameraPermissionsAsync,
   requestMicrophonePermissionsAsync,
@@ -24,11 +26,11 @@ import {
   convertBase64ToTensor,
   startPrediction,
 } from './tensor-helper';
+
 import {cropPicture} from './image-helper';
 
-import {Camera} from 'expo-camera';
-
 import Feather from "@expo/vector-icons/Feather";
+
 
 const RESULT_MAPPING = ['Triangle', 'Circle', 'Square'];
 
@@ -57,6 +59,45 @@ const Main = () => {
     );
     setPresentedShape(RESULT_MAPPING[highestPrediction]);
   };
+
+  const [type, setType] = useState(CameraType.back);
+  const [flashMode, setFlashMode] = useState("off");
+  const [pictureUri, setPictureUri] = useState("");
+
+  useEffect(() => {
+    requestPermissions();
+  }, []);
+
+  const requestPermissions = async () => {
+    await requestCameraPermissionsAsync();
+    await requestMicrophonePermissionsAsync();
+  };
+
+  const getPermissions = async () => {
+    const cameraPermission = await getCameraPermissionsAsync();
+    const microphonePermission = await getMicrophonePermissionsAsync();
+
+    return cameraPermission.granted && microphonePermission.granted;
+  };
+
+  const switchFlashMode = () =>
+    setFlashMode(flashMode === "off" ? "on" : "off");
+
+  const switchType = () =>
+    setType(type === CameraType.back ? CameraType.front : CameraType.back);
+
+  const takePicture = async () => {
+    const { uri, width, height } = await cameraRef?.current.takePictureAsync();
+    setPictureUri(uri);
+  };
+
+  if (!getPermissions()) {
+    return Alert.alert(
+      "Permissions Required!",
+      "You need to provide the permissions to access the camera",
+      [{ text: "Got it" }]
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -87,19 +128,17 @@ const Main = () => {
         onPress={() => handleImageCapture()}
         style={styles.captureButton}></Pressable>
     </View>
-    
   );
+
+
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    width: '100%',
-    height: '100%',
   },
   camera: {
-    width: '100%',
-    height: '100%',
+    flex: 1,
   },
   captureButton: {
     position: 'absolute',
@@ -135,7 +174,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'red',
-  },
+  }
 });
 
 export default Main;
